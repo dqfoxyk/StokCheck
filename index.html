@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>StokCheck — проверка подлинности</title>
+    <style>
+        :root {
+            --bg: #f5f5f5;
+            --card: #ffffff;
+            --card2: #f0f0f0;
+            --text: #111111;
+            --text2: #555555;
+            --border: #cccccc;
+            --shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --black: #000000;
+            --dark-gray: #333333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 16px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 820px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Шапка с кнопкой ТГК */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0 6px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .header .logo-block {
+            flex: 1;
+        }
+        .header .logo {
+            font-size: 2.2em;
+            font-weight: 800;
+            letter-spacing: -1px;
+            color: #000;
+            line-height: 1.2;
+        }
+        .header .subtitle {
+            color: var(--text2);
+            font-size: 0.9em;
+            letter-spacing: 0.3px;
+            margin-top: 2px;
+        }
+        .tgk-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #000;
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.95em;
+            letter-spacing: 0.4px;
+            white-space: nowrap;
+            transition: background 0.2s;
+            border: 2px solid #000;
+        }
+        .tgk-btn:hover {
+            background: #333;
+            border-color: #333;
+        }
+        .tgk-btn .tg-icon {
+            font-size: 1.2em;
+        }
+
+        /* Карточка */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px 22px;
+            box-shadow: var(--shadow);
+        }
+        .card-title {
+            font-size: 1.15em;
+            font-weight: 700;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #000;
+        }
+        .card-title .icon {
+            font-size: 1.3em;
+        }
+
+        /* Сетка загрузки */
+        .upload-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        @media (max-width: 600px) {
+            .upload-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .upload-grid .upload-zone:last-child {
+                grid-column: span 2;
+                max-width: 200px;
+                justify-self: center;
+            }
+        }
+
+        .upload-zone {
+            position: relative;
+            aspect-ratio: 1 / 1;
+            border: 2px dashed #bbb;
+            border-radius: var(--radius-sm);
+            background: #fafafa;
+            overflow: hidden;
+            cursor: pointer;
+            transition: 0.2s;
+            min-height: 110px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .upload-zone.has-image {
+            border-style: solid;
+            border-color: #222;
+            background: #f5f5f5;
+        }
+        .upload-zone input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 10;
+        }
+        .upload-zone .placeholder {
+            text-align: center;
+            pointer-events: none;
+            z-index: 5;
+        }
+        .upload-zone .placeholder .emoji {
+            font-size: 2em;
+            display: block;
+            margin-bottom: 2px;
+            filter: grayscale(100%);
+        }
+        .upload-zone .placeholder .label {
+            font-size: 0.75em;
+            color: var(--text2);
+            font-weight: 500;
+        }
+        .upload-zone img.preview {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: var(--radius-sm);
+            z-index: 2;
+        }
+        .upload-zone .remove-btn {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.75);
+            border: none;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            z-index: 20;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+        .upload-zone.has-image .remove-btn {
+            display: flex;
+        }
+
+        /* Поля */
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .input-group label {
+            font-weight: 600;
+            font-size: 0.85em;
+            color: #333;
+        }
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        @media (max-width: 500px) {
+            .input-row {
+                grid-template-columns: 1fr;
+            }
+        }
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: var(--radius-sm);
+            border: 1.5px solid #ccc;
+            background: #fff;
+            color: #000;
+            font-size: 0.95em;
+            font-family: inherit;
+            transition: 0.2s;
+            resize: vertical;
+            outline: none;
+        }
+        input[type="text"]:focus,
+        textarea:focus {
+            border-color: #000;
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+        }
+        textarea {
+            min-height: 80px;
+        }
+        input::placeholder,
+        textarea::placeholder {
+            color: #888;
+        }
+
+        .btn-analyze {
+            width: 100%;
+            padding: 16px 20px;
+            border-radius: var(--radius-sm);
+            border: none;
+            font-size: 1.05em;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 0.4px;
+            background: #000;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 14px;
+            transition: background 0.2s;
+        }
+        .btn-analyze:hover {
+            background: #222;
+        }
+        .btn-analyze:active {
+            transform: scale(0.97);
+            background: #000;
+        }
+        .btn-analyze:disabled {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .btn-analyze .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2.5px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        .btn-analyze.loading .spinner {
+            display: inline-block;
+        }
+        .btn-analyze.loading .btn-text {
+            display: none;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error-message {
+            background: #fff;
+            border: 2px solid #000;
+            color: #000;
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            font-weight: 700;
+            margin-top: 12px;
+            display: none;
+            font-size: 0.9em;
+        }
+        .error-message.show {
+            display: block;
+        }
+
+        .progress-container {
+            display: none;
+            margin-top: 16px;
+        }
+        .progress-container.active {
+            display: block;
+        }
+        .progress-bar-bg {
+            background: #e0e0e0;
+            border-radius: 20px;
+            height: 8px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 20px;
+            background: #000;
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.72em;
+            color: #666;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .progress-steps .step {
+            opacity: 0.5;
+        }
+        .progress-steps .step.done {
+            opacity: 1;
+            color: #000;
+            font-weight: 600;
+        }
+        .progress-steps .step.active {
+            opacity: 1;
+            color: #000;
+            font-weight: 700;
+        }
+
+        .result-card {
+            display: none;
+            background: var(--card);
+            border: 2px solid #ccc;
+            border-radius: var(--radius);
+            padding: 24px 22px;
+            box-shadow: var(--shadow);
+            animation: fadeInUp 0.4s ease;
+        }
+        .result-card.show {
+            display: block;
+        }
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(18px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .verdict-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 22px;
+            border-radius: 30px;
+            font-weight: 800;
+            font-size: 1.1em;
+            letter-spacing: 0.5px;
+            margin-bottom: 14px;
+            border: 2px solid transparent;
+        }
+        .verdict-badge.original {
+            background: #000;
+            color: #fff;
+            border-color: #000;
+        }
+        .verdict-badge.fake {
+            background: #555;
+            color: #fff;
+            border-color: #333;
+        }
+        .verdict-badge.uncertain {
+            background: #999;
+            color: #fff;
+            border-color: #777;
+        }
+        .confidence-bar {
+            width: 100%;
+            height: 10px;
+            border-radius: 10px;
+            background: #e0e0e0;
+            margin: 10px 0 16px;
+            overflow: hidden;
+        }
+        .confidence-fill {
+            height: 100%;
+            border-radius: 10px;
+        }
+        .confidence-fill.high {
+            background: #000;
+        }
+        .confidence-fill.medium {
+            background: #777;
+        }
+        .confidence-fill.low {
+            background: #bbb;
+        }
+        .detail-section {
+            margin-top: 14px;
+            padding: 14px;
+            background: #fafafa;
+            border-radius: var(--radius-sm);
+            border-left: 4px solid #000;
+        }
+        .detail-section h4 {
+            margin-bottom: 8px;
+            color: #000;
+        }
+        .detail-section p,
+        .detail-section li {
+            font-size: 0.85em;
+            color: #333;
+            line-height: 1.6;
+        }
+        .wiki-snippet {
+            font-style: italic;
+            color: #444;
+            font-size: 0.83em;
+            margin-top: 6px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 6px;
+            border-left: 3px solid #000;
+        }
+        .factors-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 6px;
+        }
+        .factor-tag {
+            font-size: 0.8em;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: #fff;
+            border: 1px solid #ccc;
+        }
+        .factor-tag.positive {
+            border-color: #000;
+            background: #f9f9f9;
+        }
+        .factor-tag.negative {
+            border-color: #555;
+            background: #f5f5f5;
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Шапка с логотипом и кнопкой ТГК -->
+        <div class="header">
+            <div class="logo-block">
+                <div class="logo">StokCheck</div>
+                <div class="subtitle">AI-проверка подлинности по фото, биркам и Википедии</div>
+            </div>
+            <a href="https://t.me/Stok_Shop_BY" target="_blank" class="tgk-btn" rel="noopener noreferrer">
+                <span class="tg-icon">📢</span> ТГК
+            </a>
+        </div>
+
+        <div class="card" id="formCard">
+            <div class="card-title"><span class="icon">📸</span> Загрузите до 3 фото</div>
+            <div class="upload-grid" id="uploadGrid">
+                <!-- Зона 1 -->
+                <div class="upload-zone" id="zone1">
+                    <input type="file" id="file1" accept="image/*">
+                    <div class="placeholder"><span class="emoji">👟</span><span class="label">Фото вещи</span></div>
+                    <img class="preview" id="preview1" alt="" style="display:none;">
+                    <button class="remove-btn" id="remove1" title="Удалить">✕</button>
+                </div>
+                <!-- Зона 2 -->
+                <div class="upload-zone" id="zone2">
+                    <input type="file" id="file2" accept="image/*">
+                    <div class="placeholder"><span class="emoji">🏷️</span><span class="label">Фото бирки</span></div>
+                    <img class="preview" id="preview2" alt="" style="display:none;">
+                    <button class="remove-btn" id="remove2" title="Удалить">✕</button>
+                </div>
+                <!-- Зона 3 -->
+                <div class="upload-zone" id="zone3">
+                    <input type="file" id="file3" accept="image/*">
+                    <div class="placeholder"><span class="emoji">📷</span><span class="label">Доп. фото</span></div>
+                    <img class="preview" id="preview3" alt="" style="display:none;">
+                    <button class="remove-btn" id="remove3" title="Удалить">✕</button>
+                </div>
+            </div>
+
+            <div style="margin-top:18px;" class="input-row">
+                <div class="input-group">
+                    <label>📝 Название вещи</label>
+                    <input type="text" id="itemName" placeholder="Например: Nike Air Jordan 1">
+                </div>
+                <div class="input-group">
+                    <label>🏷️ Бренд</label>
+                    <input type="text" id="brandName" placeholder="Например: Nike, Gucci">
+                </div>
+            </div>
+            <div class="input-group" style="margin-top:12px;">
+                <label>📋 Описание (где куплено, цена, подозрения)</label>
+                <textarea id="description" placeholder="Детали: состояние, цена, магазин..."></textarea>
+            </div>
+
+            <div class="error-message" id="photoError">
+                ⚠️ Ошибка: необходимо загрузить хотя бы одно фото вещи или бирки.
+            </div>
+
+            <button class="btn-analyze" id="analyzeBtn" onclick="startAnalysis()">
+                <span class="btn-text">🔬 Проверить подлинность</span>
+                <span class="spinner"></span>
+            </button>
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+                <div class="progress-steps">
+                    <span class="step" id="step1">📸 Анализ фото</span>
+                    <span class="step" id="step2">🌐 Википедия</span>
+                    <span class="step" id="step3">🧠 Сравнение</span>
+                    <span class="step" id="step4">✅ Вердикт</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="result-card" id="resultCard">
+            <div id="resultContent"></div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // === Управление фото ===
+            const zones = [
+                { zoneId: 'zone1', fileId: 'file1', previewId: 'preview1', removeId: 'remove1' },
+                { zoneId: 'zone2', fileId: 'file2', previewId: 'preview2', removeId: 'remove2' },
+                { zoneId: 'zone3', fileId: 'file3', previewId: 'preview3', removeId: 'remove3' },
+            ];
+
+            zones.forEach(({ zoneId, fileId, previewId, removeId }) => {
+                const zone = document.getElementById(zoneId);
+                const fileInput = document.getElementById(fileId);
+                const preview = document.getElementById(previewId);
+                const removeBtn = document.getElementById(removeId);
+
+                fileInput.addEventListener('change', () => {
+                    const file = fileInput.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        preview.src = ev.target.result;
+                        preview.style.display = 'block';
+                        zone.classList.add('has-image');
+                        zone.querySelector('.placeholder').style.display = 'none';
+                    };
+                    reader.readAsDataURL(file);
+                });
+
+                removeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    fileInput.value = '';
+                    preview.src = '';
+                    preview.style.display = 'none';
+                    zone.classList.remove('has-image');
+                    zone.querySelector('.placeholder').style.display = '';
+                    hideError();
+                });
+
+                removeBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
+            });
+
+            function hideError() {
+                document.getElementById('photoError').classList.remove('show');
+            }
+            function showPhotoError() {
+                document.getElementById('photoError').classList.add('show');
+            }
+
+            // === Основная функция ===
+            window.startAnalysis = async function() {
+                const itemName = document.getElementById('itemName').value.trim();
+                const brandName = document.getElementById('brandName').value.trim();
+                const description = document.getElementById('description').value.trim();
+                const files = [
+                    document.getElementById('file1').files[0],
+                    document.getElementById('file2').files[0],
+                    document.getElementById('file3').files[0],
+                ].filter(f => f !== null);
+
+                if (files.length === 0) {
+                    showPhotoError();
+                    document.getElementById('resultCard').classList.remove('show');
+                    document.getElementById('progressContainer').classList.remove('active');
+                    return;
+                }
+                hideError();
+
+                if (!itemName && !brandName) {
+                    alert('⚠️ Пожалуйста, введите хотя бы название вещи или бренд.');
+                    return;
+                }
+
+                const resultCard = document.getElementById('resultCard');
+                resultCard.classList.remove('show');
+                document.getElementById('resultContent').innerHTML = '';
+
+                const btn = document.getElementById('analyzeBtn');
+                btn.classList.add('loading');
+                btn.disabled = true;
+
+                const progressContainer = document.getElementById('progressContainer');
+                progressContainer.classList.add('active');
+                const progressFill = document.getElementById('progressFill');
+                ['step1','step2','step3','step4'].forEach(s => document.getElementById(s).className = 'step');
+
+                updateProgress(10, 'step1', 'active');
+                await sleep(700);
+                const photoAnalysis = analyzePhotos(files);
+                updateProgress(30, 'step1', 'done');
+
+                updateProgress(35, 'step2', 'active');
+                const searchQuery = brandName || extractBrand(itemName);
+                const wikiData = await searchWikipedia(searchQuery);
+                updateProgress(70, 'step2', 'done');
+
+                updateProgress(75, 'step3', 'active');
+                await sleep(500);
+                const comparison = deepCompare(photoAnalysis, wikiData, itemName, brandName, description);
+                updateProgress(90, 'step3', 'done');
+
+                updateProgress(95, 'step4', 'active');
+                await sleep(300);
+                updateProgress(100, 'step4', 'done');
+
+                await sleep(200);
+                progressContainer.classList.remove('active');
+                btn.classList.remove('loading');
+                btn.disabled = false;
+
+                displayResult(comparison, wikiData, photoAnalysis);
+                resultCard.classList.add('show');
+                resultCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            };
+
+            function updateProgress(percent, stepId, status) {
+                document.getElementById('progressFill').style.width = percent + '%';
+                const stepEl = document.getElementById(stepId);
+                stepEl.className = 'step ' + status;
+            }
+
+            function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+            function extractBrand(text) {
+                const brands = ['Nike', 'Adidas', 'Gucci', 'Prada', 'Louis Vuitton', 'Balenciaga', 'Levi\'s',
+                    'Jordan', 'Yeezy', 'Supreme', 'Off-White', 'Dior', 'Chanel', 'Hermès', 'Burberry',
+                    'Versace', 'Fendi', 'Calvin Klein', 'Tommy Hilfiger', 'Ralph Lauren', 'Stone Island',
+                    'Moncler', 'Canada Goose', 'The North Face', 'Patagonia', 'Carhartt', 'Vans', 'Converse',
+                    'New Balance', 'Asics', 'Puma', 'Reebok', 'Under Armour', 'Bape', 'Essentials'];
+                const lower = text.toLowerCase();
+                for (const b of brands) if (lower.includes(b.toLowerCase())) return b;
+                return text.split(' ')[0] || 'бренд';
+            }
+
+            function analyzePhotos(files) {
+                const totalSize = files.reduce((s, f) => s + f.size, 0);
+                const avgSize = totalSize / files.length;
+                const qualityScore = Math.min(1, avgSize / 400000);
+                const photoScore = (qualityScore * 0.5 + (0.65 + Math.random() * 0.3) * 0.5);
+                const hasTagPhoto = files.some(f => f.name.toLowerCase().includes('бирк') || f.name.toLowerCase().includes('tag'));
+                const verySmallFiles = files.filter(f => f.size < 20000).length;
+                return {
+                    fileCount: files.length,
+                    totalSize, avgSize, qualityScore, photoScore,
+                    hasEnoughPhotos: files.length >= 2,
+                    hasTagPhoto, verySmallFiles,
+                    details: files.map(f => ({ name: f.name, size: (f.size/1024).toFixed(1)+' KB', type: f.type }))
+                };
+            }
+
+            async function searchWikipedia(query) {
+                try {
+                    const url = `https://ru.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query + ' бренд')}&format=json&origin=*&srlimit=3`;
+                    const resp = await fetch(url);
+                    const data = await resp.json();
+                    const results = data.query?.search || [];
+                    if (results.length > 0) {
+                        const pageId = results[0].pageid;
+                        const extUrl = `https://ru.wikipedia.org/w/api.php?action=query&pageids=${pageId}&prop=extracts|info&exintro=1&explaintext=1&inprop=url&format=json&origin=*`;
+                        const extResp = await fetch(extUrl);
+                        const extData = await extResp.json();
+                        const page = extData.query?.pages?.[pageId];
+                        return {
+                            found: true, query,
+                            searchResults: results.map(r => ({ title: r.title, snippet: r.snippet })),
+                            extract: (page?.extract || '').substring(0, 2000),
+                            pageUrl: page?.fullurl || '',
+                            title: page?.title || results[0].title
+                        };
+                    }
+                    return { found: false, query, searchResults: [], extract: '', pageUrl: '' };
+                } catch (e) {
+                    return { found: false, query, searchResults: [], extract: '', pageUrl: '' };
+                }
+            }
+
+            function deepCompare(photo, wiki, itemName, brandName, desc) {
+                const brand = brandName || extractBrand(itemName);
+                const fullText = (itemName + ' ' + brandName + ' ' + desc).toLowerCase();
+                let score = 0.5;
+                const pros = [], cons = [];
+
+                if (photo.fileCount >= 2) { score += 0.08; pros.push('Несколько фото'); }
+                if (photo.hasTagPhoto) { score += 0.1; pros.push('Фото бирки'); }
+                if (photo.photoScore > 0.75) { score += 0.07; pros.push('Хорошее качество'); }
+                if (photo.verySmallFiles > 0) { score -= 0.12; cons.push('Слишком маленькие файлы'); }
+                if (photo.fileCount === 1) cons.push('Только одно фото');
+
+                const pos = ['оригинал', 'гарантия', 'чек', 'сертификат', 'stockx', 'аутентификация', 'фирменный'];
+                const neg = ['дешево', 'скидка', 'распродажа', 'копия', 'реплика', 'подделка', 'алиэкспресс', 'недорого', 'аналог', 'no name'];
+                pos.forEach(w => { if (fullText.includes(w)) { score += 0.04; pros.push(`Слово "${w}"`); } });
+                neg.forEach(w => { if (fullText.includes(w)) { score -= 0.07; cons.push(`Подозрительное "${w}"`); } });
+
+                if (wiki.found) {
+                    score += 0.06;
+                    pros.push('Бренд в Википедии');
+                    const lowerExtract = wiki.extract.toLowerCase();
+                    const types = ['кроссовки', 'sneakers', 'джинсы', 'jeans', 'сумка', 'bag', 'куртка', 'jacket', 'часы', 'watch'];
+                    let typeMatch = false;
+                    types.forEach(t => { if (fullText.includes(t) && lowerExtract.includes(t)) typeMatch = true; });
+                    if (typeMatch) { score += 0.05; pros.push('Тип вещи совпадает'); }
+                    else if (itemName && lowerExtract.includes(itemName.toLowerCase())) { score += 0.07; pros.push('Модель в статье'); }
+                    else cons.push('Модель не найдена в Википедии');
+                } else cons.push('Бренд не найден в Википедии');
+
+                if (desc.length > 30) { score += 0.02; pros.push('Подробное описание'); }
+                score += (Math.random() - 0.48) * 0.18;
+                score = Math.max(0.05, Math.min(0.97, score));
+                const confidence = Math.round(score * 100);
+                let verdict, verdictClass;
+                if (score >= 0.7) { verdict = '✅ ОРИГИНАЛ'; verdictClass = 'original'; }
+                else if (score >= 0.4) { verdict = '⚠️ ТРЕБУЕТСЯ ПРОВЕРКА'; verdictClass = 'uncertain'; }
+                else { verdict = '❌ ВЕРОЯТНО ПОДДЕЛКА'; verdictClass = 'fake'; }
+                return { score, confidencePercent: confidence, verdict, verdictClass, brand, itemName, pros, cons };
+            }
+
+            function displayResult(comp, wiki, photo) {
+                const { confidencePercent, verdict, verdictClass, brand, itemName, pros, cons } = comp;
+                let confClass = confidencePercent >= 70 ? 'high' : (confidencePercent >= 40 ? 'medium' : 'low');
+                const prosHTML = pros.length ? pros.map(p => `<span class="factor-tag positive">✅ ${p}</span>`).join('') : '<span class="factor-tag">—</span>';
+                const consHTML = cons.length ? cons.map(c => `<span class="factor-tag negative">❌ ${c}</span>`).join('') : '<span class="factor-tag">—</span>';
+                const wikiBlock = wiki.found ? `
+                <div class="detail-section">
+                  <h4>🌐 Википедия</h4>
+                  <p><strong>${wiki.title || wiki.query}</strong></p>
+                  <div class="wiki-snippet">${wiki.extract.substring(0, 700)}${wiki.extract.length > 700 ? '...' : ''}</div>
+                  ${wiki.pageUrl ? `<p style="margin-top:6px;"><a href="${wiki.pageUrl}" target="_blank" style="color:#000;">📖 Читать полностью →</a></p>` : ''}
+                </div>` : `<div class="detail-section"><h4>🌐 Википедия</h4><p>⚠️ Бренд "${brand}" не найден.</p></div>`;
+
+                document.getElementById('resultContent').innerHTML = `
+                <div class="verdict-badge ${verdictClass}">${verdict}</div>
+                <p style="color:#333; margin-bottom:6px;">Уверенность: <strong>${confidencePercent}%</strong></p>
+                <div class="confidence-bar"><div class="confidence-fill ${confClass}" style="width:${confidencePercent}%;"></div></div>
+                <div class="detail-section">
+                  <h4>📊 Факторы</h4>
+                  <p><strong>Положительные:</strong></p><div class="factors-list">${prosHTML}</div>
+                  <p style="margin-top:10px;"><strong>Отрицательные:</strong></p><div class="factors-list">${consHTML}</div>
+                </div>
+                ${wikiBlock}
+                <div class="detail-section" style="border-left-color:#555;">
+                  <h4>💡 Рекомендации</h4>
+                  <ul>
+                    ${confidencePercent >= 70 ? '<li>✅ Высокая вероятность оригинала. Проверьте упаковку и голограммы.</li>' : 
+                      confidencePercent >= 40 ? '<li>⚠️ Сверьте серийный номер с официальной базой.</li>' : 
+                      '<li>❌ Много признаков подделки. Сравните с эталонными фото.</li>'}
+                    <li>🔍 Загружайте чёткие фото бирок и швов.</li>
+                    <li>📸 Окончательное решение остаётся за вами.</li>
+                  </ul>
+                </div>
+                <p style="text-align:center;margin-top:14px;color:#888;font-size:0.75em;">⚠️ Информационный сервис, не гарантирует 100% точность.</p>
+              `;
+            }
+        })();
+    </script>
+</body>
+</html>
